@@ -11,13 +11,13 @@ from dataclasses import dataclass
 import multiprocessing as mp
 
 import json
+
 PERMNO_to_COMNAM = pd.read_csv("../data/PERMNO_to_COMNAM.csv", index_col=0)
-with open("../data/PERMNO_TO_SECTOR.json", "r") as f:
+with open("../data/PERMNO_TO_SECTOR.json") as f:
     PERMNO_TO_SECTOR = json.load(f)
 
+
 def stat_arb_names2(cols):
-
-
     for asset_name in cols:
         try:
             company = PERMNO_to_COMNAM.loc[int(asset_name)].COMNAM.iloc[0]
@@ -26,12 +26,12 @@ def stat_arb_names2(cols):
         sector = PERMNO_TO_SECTOR[asset_name]
         print(f"{company}, {sector}")
 
+
 def matching_sector2(cols):
     """
     returns the fraction of stocks in stat-arb that has the same sector as some
     other stock in the stat-arb
     """
-
 
     sectors = {}
 
@@ -50,6 +50,7 @@ def matching_sector2(cols):
     print(counts)
 
     return 1 - num_one_counts / len(cols)
+
 
 def matching_sector(stat_arb):
     """
@@ -71,17 +72,14 @@ def matching_sector(stat_arb):
 
     counts = list(sectors.values())
     # print("\n", counts)
-    
-
 
     num_one_counts = np.sum([1 for x in counts if x == 1])
     # print(1 - num_one_counts / len(asset_names))
 
-
     return 1 - num_one_counts / len(asset_names)
 
-def stat_arb_names(stat_arb):
 
+def stat_arb_names(stat_arb):
     asset_names = stat_arb.asset_names
 
     for asset_name in asset_names:
@@ -92,7 +90,6 @@ def stat_arb_names(stat_arb):
 
         sector = PERMNO_TO_SECTOR[asset_name]
         print(f"{company}, {sector}")
-
 
 
 @dataclass(frozen=True)
@@ -408,9 +405,10 @@ def run_backtest(
     return results, portfolios
 
 
-def plot_stat_arb(stat_arb_tuple, insample_bound, outsample_bound, spreads, legend=True):
+def plot_stat_arb(
+    stat_arb_tuple, insample_bound, outsample_bound, spreads, legend=True
+):
     stat_arb = stat_arb_tuple.stat_arb
-    metrics = stat_arb_tuple.metrics
 
     mu_memory = stat_arb.mu_memory
     asset_names = stat_arb.asset_names
@@ -580,7 +578,6 @@ def plot_stat_arb(stat_arb_tuple, insample_bound, outsample_bound, spreads, lege
         )
 
     if legend:
-
         plt.legend(
             bbox_to_anchor=(0.5, 1.225), loc="upper center", ncol=3, borderaxespad=0
         )
@@ -628,8 +625,8 @@ def plot_stat_arb(stat_arb_tuple, insample_bound, outsample_bound, spreads, lege
         # m_test = stat_arb.metrics(prices_test, mu.loc[prices_test.index], T_max=500)
 
     else:
-        m_train = stat_arb.metrics(prices_train, stat_arb.mu, T_max=np.inf)
-        m_test = stat_arb.metrics(prices_test, stat_arb.mu, T_max=63)
+        stat_arb.metrics(prices_train, stat_arb.mu, T_max=np.inf)
+        stat_arb.metrics(prices_test, stat_arb.mu, T_max=63)
 
     #### TESTING
 
@@ -637,7 +634,6 @@ def plot_stat_arb(stat_arb_tuple, insample_bound, outsample_bound, spreads, lege
         mu = mu
     else:
         mu = stat_arb.mu
-
 
     ### Construct stat arb portfolio
     # prices_temp = pd.concat([prices_train, prices_test], axis=0)
@@ -651,16 +647,16 @@ def plot_stat_arb(stat_arb_tuple, insample_bound, outsample_bound, spreads, lege
 
     ### Shorting cost
     short_rate = 3 * 0.01**2
-    short_cost = (
-        portfolio.stocks[portfolio.stocks < 0].abs() * portfolio.prices
-    ).sum(axis=1) * short_rate
+    short_cost = (portfolio.stocks[portfolio.stocks < 0].abs() * portfolio.prices).sum(
+        axis=1
+    ) * short_rate
     profit -= short_cost
 
     print("fsdfdds", prices_train.index[-1])
     print("fsdfdds", prices_test.index[0])
 
-    profits_train = profit.loc[:prices_train.index[-1]]
-    profits_test = profit.loc[prices_test.index[0]:]
+    profits_train = profit.loc[: prices_train.index[-1]]
+    profits_test = profit.loc[prices_test.index[0] :]
     profits_test.loc[exit_date:] = 0
 
     print("fdaadadsad", profits_test.sum())
@@ -682,7 +678,6 @@ def plot_stat_arb(stat_arb_tuple, insample_bound, outsample_bound, spreads, lege
     # plt.plot(metrics.daily_profit.cumsum(), color="r", label="Out-of-sample")
 
     plt.plot(profits_test.cumsum(), color="r", label="Out-of-sample")
-
 
     plt.axvline(prices_test.index[0], color="k", linewidth=2)
     plt.gcf().autofmt_xdate()

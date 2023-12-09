@@ -65,7 +65,6 @@ def construct_stat_arb(
     solver="CLARABEL",
     second_pass=False,
 ):
-
     if seed is not None:
         np.random.seed(seed)
 
