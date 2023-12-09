@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import multiprocessing as mp
 import time
 import warnings
 from dataclasses import dataclass
@@ -8,8 +7,6 @@ from dataclasses import dataclass
 import cvxpy as cp
 import numpy as np
 import pandas as pd
-
-
 
 
 # Filter out the specific UserWarning
@@ -68,6 +65,7 @@ def construct_stat_arb(
     solver="CLARABEL",
     second_pass=False,
 ):
+
     if seed is not None:
         np.random.seed(seed)
 
@@ -293,13 +291,9 @@ class _State:
         start = time.time()
 
         try:
-            self.prob.solve(
-                solver=self.solver, verbose=False
-            ) 
+            self.prob.solve(solver=self.solver, verbose=False)
 
         except cp.SolverError:
-            import matplotlib.pyplot as plt
-
             print("Solver failed, resetting...")
 
             self.reset()
@@ -316,12 +310,7 @@ class _State:
         returns the gradient of g at pk
         """
         M = self.mu_memory
-        mu = (
-            pd.Series(pk.flatten())
-            .rolling(M, min_periods=1)
-            .mean()
-            .values.reshape(-1, 1)
-        )
+        (pd.Series(pk.flatten()).rolling(M, min_periods=1).mean().values.reshape(-1, 1))
         start = M
 
         grad_g = np.zeros(pk.shape)
@@ -347,7 +336,6 @@ class _State:
         return stat_arb
 
 
-
 @dataclass(frozen=True)
 class StatArb:
     """
@@ -355,7 +343,7 @@ class StatArb:
     """
 
     assets: dict
-    mu: float  # 
+    mu: float  #
     mu_memory: int = None
     moving_mean: bool = True
     P_max: float = None
@@ -424,7 +412,8 @@ class StatArb:
         policy: q_t = mu_t - p_t
         """
         if mu is None:
-            assert not self.moving_mean; "mu must be specified for moving mean stat arb"
+            assert not self.moving_mean
+            "mu must be specified for moving mean stat arb"
             mu = self.mu
 
         if self.moving_mean:

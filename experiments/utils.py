@@ -1,12 +1,98 @@
 import numpy as np
-from tqdm import trange, tqdm
+from tqdm import tqdm
 import pandas as pd
-from cvx.stat_arb.ccp import *
+from cvx.stat_arb.ccp import construct_stat_arb
 from cvx.simulator.trading_costs import TradingCostModel
 from cvx.simulator.portfolio import EquityPortfolio
 from collections import namedtuple
 import matplotlib.pyplot as plt
 from typing import Any
+from dataclasses import dataclass
+import multiprocessing as mp
+
+import json
+PERMNO_to_COMNAM = pd.read_csv("../data/PERMNO_to_COMNAM.csv", index_col=0)
+with open("../data/PERMNO_TO_SECTOR.json", "r") as f:
+    PERMNO_TO_SECTOR = json.load(f)
+
+def stat_arb_names2(cols):
+
+
+    for asset_name in cols:
+        try:
+            company = PERMNO_to_COMNAM.loc[int(asset_name)].COMNAM.iloc[0]
+        except AttributeError:
+            company = PERMNO_to_COMNAM.loc[int(asset_name)].COMNAM
+        sector = PERMNO_TO_SECTOR[asset_name]
+        print(f"{company}, {sector}")
+
+def matching_sector2(cols):
+    """
+    returns the fraction of stocks in stat-arb that has the same sector as some
+    other stock in the stat-arb
+    """
+
+
+    sectors = {}
+
+    for asset in cols:
+        sector = PERMNO_TO_SECTOR[asset]
+
+        if sector in sectors:
+            sectors[sector] += 1
+        else:
+            sectors[sector] = 1
+
+    counts = list(sectors.values())
+
+    num_one_counts = np.sum([1 for x in counts if x == 1])
+
+    print(counts)
+
+    return 1 - num_one_counts / len(cols)
+
+def matching_sector(stat_arb):
+    """
+    returns the fraction of stocks in stat-arb that has the same sector as some
+    other stock in the stat-arb
+    """
+
+    asset_names = stat_arb.asset_names
+
+    sectors = {}
+
+    for asset in asset_names:
+        sector = PERMNO_TO_SECTOR[asset]
+
+        if sector in sectors:
+            sectors[sector] += 1
+        else:
+            sectors[sector] = 1
+
+    counts = list(sectors.values())
+    # print("\n", counts)
+    
+
+
+    num_one_counts = np.sum([1 for x in counts if x == 1])
+    # print(1 - num_one_counts / len(asset_names))
+
+
+    return 1 - num_one_counts / len(asset_names)
+
+def stat_arb_names(stat_arb):
+
+    asset_names = stat_arb.asset_names
+
+    for asset_name in asset_names:
+        try:
+            company = PERMNO_to_COMNAM.loc[int(asset_name)].COMNAM.iloc[0]
+        except AttributeError:
+            company = PERMNO_to_COMNAM.loc[int(asset_name)].COMNAM
+
+        sector = PERMNO_TO_SECTOR[asset_name]
+        print(f"{company}, {sector}")
+
 
 
 @dataclass(frozen=True)
@@ -17,7 +103,7 @@ class SpreadCostModel(TradingCostModel):
         self, prices: pd.DataFrame, trades: pd.DataFrame, **kwargs: Any
     ) -> pd.DataFrame:
         volume = prices * trades
-        return 0.5*self.spreads.loc[volume.index] * volume.abs()
+        return 0.5 * self.spreads.loc[volume.index] * volume.abs()
 
 
 def metrics(portfolios_after_cost, results):
@@ -29,7 +115,9 @@ def metrics(portfolios_after_cost, results):
     min_cum_prof = []
     drawdowns = []
 
-    for i, portfolio in tqdm(enumerate(portfolios_after_cost), total=len(portfolios_after_cost)):
+    for i, portfolio in tqdm(
+        enumerate(portfolios_after_cost), total=len(portfolios_after_cost)
+    ):
         res = results[i]
 
         exit_date = res.metrics.exit_date
@@ -42,12 +130,14 @@ def metrics(portfolios_after_cost, results):
 
         min_navs.append(nav.min())
 
-        profit = portfolio.profit 
+        profit = portfolio.profit
         profit -= portfolio.trading_costs.sum(axis=1)
 
         ### Shorting cost
         short_rate = 3 * 0.01**2
-        short_cost = (portfolio.stocks[portfolio.stocks < 0].abs() * portfolio.prices).sum(axis=1) * short_rate 
+        short_cost = (
+            portfolio.stocks[portfolio.stocks < 0].abs() * portfolio.prices
+        ).sum(axis=1) * short_rate
         profit -= short_cost
 
         profits.append(profit.sum())
@@ -64,15 +154,17 @@ def metrics(portfolios_after_cost, results):
     min_cum_prof = pd.Series(min_cum_prof)
     drawdowns = pd.Series(drawdowns)
 
-    return pd.DataFrame({
-        "means": means,
-        "stdevs": stdevs,
-        "sharpes": sharpes,
-        "profits": profits,
-        "min_navs": min_navs,
-        "min_cum_prof": min_cum_prof,
-        "drawdowns": drawdowns,
-    })
+    return pd.DataFrame(
+        {
+            "means": means,
+            "stdevs": stdevs,
+            "sharpes": sharpes,
+            "profits": profits,
+            "min_navs": min_navs,
+            "min_cum_prof": min_cum_prof,
+            "drawdowns": drawdowns,
+        }
+    )
 
 
 def simulate(res, portfolio, trading_cost_model, lev_fraction):
@@ -91,7 +183,7 @@ def simulate(res, portfolio, trading_cost_model, lev_fraction):
         prices_temp,
         stocks=stocks_temp,
         trading_cost_model=trading_cost_model,
-        initial_cash = lev_fraction * lev0,
+        initial_cash=lev_fraction * lev0,
     )
 
     navs = portfolio_temp.nav
@@ -114,7 +206,7 @@ def simulate(res, portfolio, trading_cost_model, lev_fraction):
         bust_time2 = bust_times2.index[0]
     else:
         bust_time2 = None
-    
+
     if bust_time1 is not None and bust_time2 is not None:
         bust_time = min(bust_time1, bust_time2)
 
@@ -130,7 +222,7 @@ def simulate(res, portfolio, trading_cost_model, lev_fraction):
         bust_sort = 2
     else:
         bust_time = None
-    
+
     if bust_time is not None:
         zeros = 0 * stocks_temp.loc[bust_time:].iloc[1:]
         stocks_temp = pd.concat([stocks_temp.loc[:bust_time], zeros], axis=0)
@@ -141,7 +233,7 @@ def simulate(res, portfolio, trading_cost_model, lev_fraction):
         prices_temp,
         stocks=stocks_temp,
         trading_cost_model=trading_cost_model,
-        initial_cash = lev_fraction * lev0,
+        initial_cash=lev_fraction * lev0,
     )
 
 
@@ -237,7 +329,6 @@ def run_backtest(
 
     n_iters = int((t_end - (train_len + 1) - t_start - remaining_to_stop) / update_freq)
 
-
     results = []
 
     seeds = [np.random.randint(9999) for _ in range(2 * n_iters)]
@@ -294,7 +385,7 @@ def run_backtest(
             # prices_test = pd.concat([prices_val, prices_test], axis=0)
             m = stat_arb.metrics(prices_test, mu, T_max=T_max)
 
-            if m is not None:    
+            if m is not None:
                 new_stat_arb_results.append(
                     StatArbResult(stat_arb, m, prices_train, prices_test)
                 )
@@ -311,16 +402,13 @@ def run_backtest(
 
         results += new_stat_arb_results
 
-
         ### Update t_start
         t_start += update_freq
     print(f"\nFinished after {i} iterations")
     return results, portfolios
 
 
-def plot_stat_arb(
-    stat_arb_tuple, insample_bound, outsample_bound, legend=True
-):
+def plot_stat_arb(stat_arb_tuple, insample_bound, outsample_bound, spreads, legend=True):
     stat_arb = stat_arb_tuple.stat_arb
     metrics = stat_arb_tuple.metrics
 
@@ -360,7 +448,6 @@ def plot_stat_arb(
     exit_date = stat_arb_tuple.metrics.exit_date
     entry_date = stat_arb_tuple.metrics.entry_date
     elim_end = exit_date + pd.Timedelta(days=100)
-
 
     plt.figure()
     plt.plot(p_train, color="b", label="In-sample")
@@ -411,33 +498,23 @@ def plot_stat_arb(
 
     xlim_start = prices_train.index[21]
 
-
     if legend:
         plt.xlabel("Date")
         plt.ylabel("Stat-arb price")
     # only show exit_date days before and after
     plt.xlim(xlim_start, elim_end)
 
-
     # plot vertical line at exit date
     if exit_trigger is not None:
         plt.axvline(
             exit_trigger, linestyle="--", color="k", label="Exit period", linewidth=2
         )
-        plt.axvline(
-            exit_date, linestyle="--", color="k", linewidth=2
-        )
-
-
+        plt.axvline(exit_date, linestyle="--", color="k", linewidth=2)
 
     ## plot horizontal line at +- insample_bound over training period
     if stat_arb.moving_mean:
-        # band_label = r"$\mu_t\pm 1$" + "(in-sample)" + "\n" + r"$\mu_t\pm 4.2
-        # \sigma_t$" + "(out-of-sample)"
         band_label = r"$\mu_t\pm 1$"
 
-        # plt.plot(mu_train+insample_bound, linestyle=":", color="k", linewidth=2, label=band_label)
-        # plt.plot(mu_train-insample_bound, linestyle=":", color="k", linewidth=2)
         if outsample_bound is not np.inf:
             plt.plot(
                 mu_test.loc[:elim_end] + outsample_bound,
@@ -452,12 +529,10 @@ def plot_stat_arb(
                 linewidth=2,
             )
         else:
-            p_train_test = pd.concat([p_train, p_test], axis=0)
+            pd.concat([p_train, p_test], axis=0)
             mu_train_test = pd.concat([mu_train, mu_test], axis=0)
 
-            # sigma = (p_train_test-mu_train_test).ewm(halflife=63).std().dropna()
             sigma = 1 / 4.2
-            # sigma = (p_train_test-mu_train_test).ewm(halflife=21).std().dropna()
 
             mu_train_test = pd.concat([mu_train, mu_test], axis=0)
             plt.plot(
@@ -504,16 +579,11 @@ def plot_stat_arb(
             linewidth=2,
         )
 
-    # plt.ylim((mu_train.iloc[-1]-insample_bound-1, mu_train.iloc[-1]+insample_bound+1))
-    # put legend on top in middle
     if legend:
-        # make the legend thinner
-        # plt.legend(bbox_to_anchor=(0.5, 1.0), loc='upper center', ncol=3)
 
         plt.legend(
             bbox_to_anchor=(0.5, 1.225), loc="upper center", ncol=3, borderaxespad=0
         )
-        # plt.legend(bbox_to_anchor=(0.5, 1.0), loc='upper center', ncol=3, borderaxespad=0.1)
 
     plt.show()
 
@@ -542,68 +612,88 @@ def plot_stat_arb(
     plt.figure()
     prices_train, prices_test = stat_arb_tuple.prices_train, stat_arb_tuple.prices_test
 
+    prices_train_test = pd.concat([prices_train, prices_test], axis=0)
     if stat_arb.moving_mean:
-        prices_train_test = pd.concat([prices_train, prices_test], axis=0)
         mu = (
             stat_arb.evaluate(prices_train_test)
             .rolling(mu_memory, min_periods=1)
             .mean()
         )
 
-        m_train = stat_arb.metrics(
-            prices_train,
-            mu.loc[prices_train.index],
-            T_max=np.inf,
-        )
-        m_test = stat_arb.metrics(
-            prices_test, mu.loc[prices_test.index], T_max=500
-        )
+        # m_train = stat_arb.metrics(
+        #     prices_train,
+        #     mu.loc[prices_train.index],
+        #     T_max=np.inf,
+        # )
+        # m_test = stat_arb.metrics(prices_test, mu.loc[prices_test.index], T_max=500)
 
     else:
-        m_train = stat_arb.metrics(
-            prices_train, stat_arb.mu, T_max=np.inf
-        )
-        m_test = stat_arb.metrics(
-            prices_test, stat_arb.mu, T_max=63
-        )
+        m_train = stat_arb.metrics(prices_train, stat_arb.mu, T_max=np.inf)
+        m_test = stat_arb.metrics(prices_test, stat_arb.mu, T_max=63)
 
-    profits_train = m_train.daily_profit.loc[xlim_start:]
-    profits_test = m_test.daily_profit
-    # print(profits_test.loc[exit_date:])
-    # profits_test.loc[exit_date:] = 0
+    #### TESTING
+
+    if stat_arb.moving_mean:
+        mu = mu
+    else:
+        mu = stat_arb.mu
+
+
+    ### Construct stat arb portfolio
+    # prices_temp = pd.concat([prices_train, prices_test], axis=0)
+    positions = stat_arb.get_positions(prices_train_test, mu, T_max=1e6)
+    trading_cost_model = SpreadCostModel(spreads)
+    portfolio = EquityPortfolio(
+        prices_train_test, stocks=positions, trading_cost_model=trading_cost_model
+    )
+    profit = portfolio.profit
+    profit -= portfolio.trading_costs.sum(axis=1)
+
+    ### Shorting cost
+    short_rate = 3 * 0.01**2
+    short_cost = (
+        portfolio.stocks[portfolio.stocks < 0].abs() * portfolio.prices
+    ).sum(axis=1) * short_rate
+    profit -= short_cost
+
+    print("fsdfdds", prices_train.index[-1])
+    print("fsdfdds", prices_test.index[0])
+
+    profits_train = profit.loc[:prices_train.index[-1]]
+    profits_test = profit.loc[prices_test.index[0]:]
+    profits_test.loc[exit_date:] = 0
+
+    print("fdaadadsad", profits_test.sum())
+
+    #### TESTING
+
+    # profits_train = m_train.daily_profit.loc[xlim_start:]
+    # profits_test = m_test.daily_profit
 
     print(2111, profits_test.sum())
 
     if exit_trigger is not None:
-        start_date = prices_train.index[-1] - pd.Timedelta(
-            days=(exit_trigger - entry_date).days
-        )
+        prices_train.index[-1] - pd.Timedelta(days=(exit_trigger - entry_date).days)
     else:
-        start_date = prices_train.index[-1] - pd.Timedelta(
-            days=(exit_date - entry_date).days
-        )
+        prices_train.index[-1] - pd.Timedelta(days=(exit_date - entry_date).days)
 
     plt.plot(profits_train.loc[xlim_start:].cumsum(), color="b", label="In-sample")
 
-    plt.plot(metrics.daily_profit.cumsum(), color="r", label="Out-of-sample")
-    # plt.plot(stat_arb_tuple.daily_profit.cumsum(), color="g", label="Out-of-sample")
+    # plt.plot(metrics.daily_profit.cumsum(), color="r", label="Out-of-sample")
+
+    plt.plot(profits_test.cumsum(), color="r", label="Out-of-sample")
+
 
     plt.axvline(prices_test.index[0], color="k", linewidth=2)
     plt.gcf().autofmt_xdate()
 
     if exit_trigger is not None:
         plt.xlim(xlim_start, elim_end)
-
     else:
         plt.xlim(xlim_start, elim_end)
 
     if legend:
         plt.ylabel("Cumulative profit")
     plt.xlabel("Date")
-    # if legend:
-    #     plt.legend(bbox_to_anchor=(0.5, 1.2), loc='upper center', ncol=2)
 
     plt.show()
-
-
-
