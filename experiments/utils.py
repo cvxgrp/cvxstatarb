@@ -634,11 +634,9 @@ def plot_stat_arb(
     ) * short_rate
     profit -= short_cost
 
-
     profits_train = profit.loc[: prices_train.index[-1]]
     profits_test = profit.loc[prices_test.index[0] :]
     profits_test.loc[exit_date:] = 0
-
 
     if exit_trigger is not None:
         prices_train.index[-1] - pd.Timedelta(days=(exit_trigger - entry_date).days)
@@ -646,7 +644,6 @@ def plot_stat_arb(
         prices_train.index[-1] - pd.Timedelta(days=(exit_date - entry_date).days)
 
     plt.plot(profits_train.loc[xlim_start:].cumsum(), color="b", label="In-sample")
-
 
     plt.plot(profits_test.cumsum(), color="r", label="Out-of-sample")
 
