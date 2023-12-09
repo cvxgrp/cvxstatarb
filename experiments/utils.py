@@ -47,8 +47,6 @@ def matching_sector2(cols):
 
     num_one_counts = np.sum([1 for x in counts if x == 1])
 
-    print(counts)
-
     return 1 - num_one_counts / len(cols)
 
 
@@ -71,10 +69,8 @@ def matching_sector(stat_arb):
             sectors[sector] = 1
 
     counts = list(sectors.values())
-    # print("\n", counts)
 
     num_one_counts = np.sum([1 for x in counts if x == 1])
-    # print(1 - num_one_counts / len(asset_names))
 
     return 1 - num_one_counts / len(asset_names)
 
@@ -223,7 +219,7 @@ def simulate(res, portfolio, trading_cost_model, lev_fraction):
     if bust_time is not None:
         zeros = 0 * stocks_temp.loc[bust_time:].iloc[1:]
         stocks_temp = pd.concat([stocks_temp.loc[:bust_time], zeros], axis=0)
-        print(f"\nPortfolio went bust at {bust_time}")
+        print(f"\nPortfolio exited early at {bust_time}")
         print(f"bust_sort: {bust_sort}")
 
     return EquityPortfolio(
@@ -484,14 +480,7 @@ def plot_stat_arb(
                 )
 
     print("stat-arb: ", stocks_str)
-    # print("mu: ", mu)
-    print("profit: ", stat_arb_tuple.metrics.total_profit)
 
-    # plot straight green line at mu
-
-    print("exit trigger: ", exit_trigger)
-
-    # plt.legend(bbox_to_anchor=(0.5, 1.2), loc='upper center', ncol=2)
     plt.gcf().autofmt_xdate()
 
     xlim_start = prices_train.index[21]
@@ -617,13 +606,6 @@ def plot_stat_arb(
             .mean()
         )
 
-        # m_train = stat_arb.metrics(
-        #     prices_train,
-        #     mu.loc[prices_train.index],
-        #     T_max=np.inf,
-        # )
-        # m_test = stat_arb.metrics(prices_test, mu.loc[prices_test.index], T_max=500)
-
     else:
         stat_arb.metrics(prices_train, stat_arb.mu, T_max=np.inf)
         stat_arb.metrics(prices_test, stat_arb.mu, T_max=63)
@@ -652,21 +634,11 @@ def plot_stat_arb(
     ) * short_rate
     profit -= short_cost
 
-    print("fsdfdds", prices_train.index[-1])
-    print("fsdfdds", prices_test.index[0])
 
     profits_train = profit.loc[: prices_train.index[-1]]
     profits_test = profit.loc[prices_test.index[0] :]
     profits_test.loc[exit_date:] = 0
 
-    print("fdaadadsad", profits_test.sum())
-
-    #### TESTING
-
-    # profits_train = m_train.daily_profit.loc[xlim_start:]
-    # profits_test = m_test.daily_profit
-
-    print(2111, profits_test.sum())
 
     if exit_trigger is not None:
         prices_train.index[-1] - pd.Timedelta(days=(exit_trigger - entry_date).days)
@@ -675,7 +647,6 @@ def plot_stat_arb(
 
     plt.plot(profits_train.loc[xlim_start:].cumsum(), color="b", label="In-sample")
 
-    # plt.plot(metrics.daily_profit.cumsum(), color="r", label="Out-of-sample")
 
     plt.plot(profits_test.cumsum(), color="r", label="Out-of-sample")
 
