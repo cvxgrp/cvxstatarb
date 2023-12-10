@@ -356,13 +356,13 @@ xpress = ["xpress"]
 
 [[package]]
 name = "cvxsimulator"
-version = "0.7.5"
+version = "0.8.12"
 description = "Simple simulator for investors"
 optional = false
 python-versions = ">=3.9,<3.12"
 files = [
-    {file = "cvxsimulator-0.7.5-py3-none-any.whl", hash = "sha256:6672441b43651515eedf88f33d4c934fd2d1fcb4710dc014fd596a9d79979868"},
-    {file = "cvxsimulator-0.7.5.tar.gz", hash = "sha256:54fdc41b7606a1090d4aad1fb4eeda0801e27a6873399a04fb1095b98c648999"},
+    {file = "cvxsimulator-0.8.12-py3-none-any.whl", hash = "sha256:e9186b274328da64990019f2d6c1261051dff25195472aabe9069d348ec7d616"},
+    {file = "cvxsimulator-0.8.12.tar.gz", hash = "sha256:a55d99af7f13307509352cb112023f513466484b0e64ae13a6535ff4c76aa8b9"},
 ]
 
 [package.dependencies]
@@ -2742,4 +2742,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9, <3.12"
-content-hash = "54c03a07e6d4e969c69deaa473f8c6bc5d142e76b936e9b65d6c0327cde0ea86"
+content-hash = "15ed3d5068f6d6073ee5d720aea91cda2348bf3cc6ec956dca2c378771f107bb"
