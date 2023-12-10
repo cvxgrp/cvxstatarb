@@ -1,6 +1,6 @@
 # cvxstatarb
 
-This code repo accompanies the paper
+This code repository accompanies the paper
 [Finding Moving-Band Statistical Arbitrages via Convex-Concave Optimization
 ](https://web.stanford.edu/~boyd/papers/cvx_ccv_stat_arb.html).
 
