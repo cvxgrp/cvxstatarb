@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "stats-arb"
-version = "0.1.0"
+version = "0.0.0"
 description = "Statistical arbitrage trading strategy using convex concave programming."
 authors = ["Kasper Johansson, Thomas Schmelzer, and Stephen Boyd"]
 readme = "README.md"
