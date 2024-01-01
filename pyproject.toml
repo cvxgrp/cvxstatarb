@@ -10,7 +10,7 @@ packages = [{include = "cvx"}]
 python = "^3.9, <3.12"
 numpy = "*"
 cvxpy = "*"
-scikit-learn = "*"
+#scikit-learn = "*"
 
 [tool.poetry.group.test.dependencies]
 pytest = "*"
@@ -19,20 +19,20 @@ pre-commit = "*"
 
 [tool.poetry.group.dev.dependencies]
 seaborn = "^0.12.2"
-dask = "^2023.9.0"
+#dask = "^2023.9.0"
 tqdm = "^4.65.0"
 matplotlib = "^3.7.1"
-refinitiv-data = "*"
+#refinitiv-data = "*"
 clarabel = "*"
-yfinance = "^0.2.14"
-wrds = "^3.1.6"
-twelvedata = "^1.2.11"
-graphviz = "^0.20.1"
+#yfinance = "^0.2.14"
+#wrds = "^3.1.6"
+#twelvedata = "^1.2.11"
+#graphviz = "^0.20.1"
 cvxsimulator = "0.7.5"
-loguru = "*"
-numpy_financial = "*"
-mosek = "*"
-cvxcovariance = "*"
+#loguru = "*"
+#numpy_financial = "*"
+#mosek = "*"
+#cvxcovariance = "*"
 
 [build-system]
 requires = ["poetry-core"]
