@@ -18,7 +18,7 @@ pytest-cov = "*"
 pre-commit = "*"
 
 [tool.poetry.group.dev.dependencies]
-seaborn = "^0.12.2"
+seaborn = "^0.13.1"
 #dask = "^2023.9.0"
 tqdm = "^4.65.0"
 matplotlib = "^3.7.1"
