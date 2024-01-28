@@ -108,6 +108,13 @@ def metrics(portfolios_after_cost, results):
     min_cum_prof = []
     drawdowns = []
 
+    NAVs = []
+    short_costs = []
+    cashs = []
+    equities = []
+    short_poss = []
+    long_poss = []
+
     for i, portfolio in tqdm(
         enumerate(portfolios_after_cost), total=len(portfolios_after_cost)
     ):
@@ -115,7 +122,22 @@ def metrics(portfolios_after_cost, results):
 
         exit_date = res.metrics.exit_date
 
-        nav = portfolio.nav.loc[:exit_date]
+        profit = portfolio.profit
+        profit -= portfolio.trading_costs.sum(axis=1)
+
+        ### Shorting cost
+        short_rate = 0.5 / 100 / 252 # half a percent per year
+
+        short_cost = (
+            portfolio.stocks[portfolio.stocks < 0].abs() * portfolio.prices
+        ).sum(axis=1) * short_rate
+
+
+        profit -= short_cost
+
+        profits.append(profit.sum())
+
+        nav = (portfolio.nav-short_cost.cumsum()).loc[:exit_date]
         returns = nav.pct_change().loc[:exit_date]
         means.append(returns.mean() * 250)
         stdevs.append(returns.std() * np.sqrt(250))
@@ -123,17 +145,17 @@ def metrics(portfolios_after_cost, results):
 
         min_navs.append(nav.min())
 
-        profit = portfolio.profit
-        profit -= portfolio.trading_costs.sum(axis=1)
+        NAVs.append(nav)
+        short_costs.append(short_cost.loc[:exit_date])
+        cashs.append(portfolio.cash.loc[:exit_date])
+        equities.append(portfolio.equity.sum(axis=1).loc[:exit_date])
+        short_poss.append(portfolio.equity[portfolio.equity < 0].sum(axis=1).loc[:exit_date])
+        long_poss.append(portfolio.equity[portfolio.equity > 0].sum(axis=1).loc[:exit_date])
 
-        ### Shorting cost
-        short_rate = 3 * 0.01**2
-        short_cost = (
-            portfolio.stocks[portfolio.stocks < 0].abs() * portfolio.prices
-        ).sum(axis=1) * short_rate
-        profit -= short_cost
 
-        profits.append(profit.sum())
+
+    
+        
 
         min_cum_prof.append(profit.cumsum().min())
 
@@ -157,7 +179,7 @@ def metrics(portfolios_after_cost, results):
             "min_cum_prof": min_cum_prof,
             "drawdowns": drawdowns,
         }
-    )
+    ), NAVs, short_costs, cashs, equities, short_poss, long_poss
 
 
 def simulate(res, portfolio, trading_cost_model, lev_fraction):
@@ -179,7 +201,13 @@ def simulate(res, portfolio, trading_cost_model, lev_fraction):
         initial_cash=lev_fraction * lev0,
     )
 
-    navs = portfolio_temp.nav
+    ### Shorting cost
+    short_rate = 0.5 / 100 / 252 # half a percent per year
+    short_cost = (portfolio.stocks[portfolio.stocks < 0].abs() * portfolio.prices).sum(
+        axis=1
+    ) * short_rate
+
+    navs = portfolio_temp.nav-short_cost.cumsum()
     positions = portfolio_temp.stocks.abs() * portfolio_temp.prices
     long_positions = positions[positions > 0].sum(axis=1)
     short_positions = positions[positions < 0].sum(axis=1)
@@ -465,18 +493,18 @@ def plot_stat_arb(
     stocks_str = ""
     for i in range(stocks.shape[0]):
         if i == 0:
-            if stocks[i] > 0:
-                stocks_str += f"{np.round(stocks[i], 1)}" + "×" + asset_names[i]
+            if stocks.iloc[i] > 0:
+                stocks_str += f"{np.round(stocks.iloc[i], 1)}" + "×" + asset_names[i]
             else:
                 stocks_str += (
-                    f"-{np.abs(np.round(stocks[i], 1))}" + "×" + asset_names[i]
+                    f"-{np.abs(np.round(stocks.iloc[i], 1))}" + "×" + asset_names[i]
                 )
         else:
-            if stocks[i] > 0:
-                stocks_str += f"+{np.round(stocks[i], 1)}" + "×" + asset_names[i]
+            if stocks.iloc[i] > 0:
+                stocks_str += f"+{np.round(stocks.iloc[i], 1)}" + "×" + asset_names[i]
             else:
                 stocks_str += (
-                    f"-{np.abs(np.round(stocks[i], 1))}" + "×" + asset_names[i]
+                    f"-{np.abs(np.round(stocks.iloc[i], 1))}" + "×" + asset_names[i]
                 )
 
     print("stat-arb: ", stocks_str)
@@ -628,7 +656,7 @@ def plot_stat_arb(
     profit -= portfolio.trading_costs.sum(axis=1)
 
     ### Shorting cost
-    short_rate = 3 * 0.01**2
+    short_rate = 0.5 / 100 / 252 # half a percent per year
     short_cost = (portfolio.stocks[portfolio.stocks < 0].abs() * portfolio.prices).sum(
         axis=1
     ) * short_rate
