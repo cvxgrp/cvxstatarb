@@ -20,7 +20,7 @@ pre-commit = "*"
 [tool.poetry.group.dev.dependencies]
 seaborn = "^0.13.2"
 #dask = "^2023.9.0"
-tqdm = "^4.65.0"
+tqdm = "^4.66.2"
 matplotlib = "^3.7.1"
 #refinitiv-data = "*"
 clarabel = "*"
