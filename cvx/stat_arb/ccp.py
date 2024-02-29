@@ -436,7 +436,7 @@ class StatArb:
         )
 
         q[exit_index + exit_length :] = 0
-        q[-1] = 0
+        q.iloc[-1] = 0
 
         exit_trigger = min(exit_index, len(q) - 1)
         exit_trigger = q.index[exit_trigger]

@@ -180,9 +180,10 @@ def simulate(res, portfolio, trading_cost_model, lev_fraction):
     )
 
     navs = portfolio_temp.nav
-    positions = portfolio_temp.stocks.abs() * portfolio_temp.prices
-    long_positions = positions[positions > 0].sum(axis=1)
-    short_positions = positions[positions < 0].sum(axis=1)
+    positions = portfolio_temp.stocks
+    absolute_notionals = positions.abs() * portfolio_temp.prices
+    long_positions = absolute_notionals[positions > 0].sum(axis=1)
+    short_positions = absolute_notionals[positions < 0].sum(axis=1)
     cash_position = portfolio_temp.cash
 
     cash0 = cash_position.iloc[0]
