@@ -2,7 +2,6 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=latex,macos,visualstudiocode,jupyternotebooks
 
 .idea
-.coverage
 
 __pycache__
 */__pycache__/*
@@ -29,6 +28,11 @@ cvx/stat_arb/__pycache__/
 # IPython
 profile_default/
 ipython_config.py
+
+experiments/markowitz.py
+experiments/minrisk.ipynb
+
+
 
 data/*
 # Remove previous ipynb_checkpoints

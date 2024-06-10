@@ -5,8 +5,6 @@ This code repository accompanies two papers:
 - [Finding Moving-Band Statistical Arbitrages via Convex-Concave Optimization](https://web.stanford.edu/~boyd/papers/cvx_ccv_stat_arb.html)
 - [A Markowitz Approach to Managing a Dynamic Basket of Moving-Band Statistical Arbitrages](https://web.stanford.edu/~boyd/papers/portfolio_of_SAs.html)
 
-
-
 ## Poetry
 
 We assume you share already the love for [Poetry](https://python-poetry.org).

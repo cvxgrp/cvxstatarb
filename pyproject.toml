@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "stats-arb"
-version = "0.0.0"
+version = "0.1.0"
 description = "Statistical arbitrage trading strategy using convex concave programming."
 authors = ["Kasper Johansson, Thomas Schmelzer, and Stephen Boyd"]
 readme = "README.md"
@@ -10,29 +10,34 @@ packages = [{include = "cvx"}]
 python = "^3.9, <3.12"
 numpy = "*"
 cvxpy = "*"
-#scikit-learn = "*"
+#pandas = "^2.0.0"
+cvxsimulator = "*"
+scikit-learn = "*"
 
-[tool.poetry.group.test.dependencies]
-pytest = "*"
+[tool.poetry.dev-dependencies]
+pytest = "7.4.1"
 pytest-cov = "*"
-pre-commit = "*"
+#jupyter = "^1.0.0"
 
-[tool.poetry.group.dev.dependencies]
-seaborn = "^0.13.2"
-#dask = "^2023.9.0"
-tqdm = "^4.66.4"
-matplotlib = "^3.8.4"
-#refinitiv-data = "*"
+seaborn = "^0.12.2"
+dask = "^2023.9.0"
+tqdm = "^4.65.0"
+matplotlib = "^3.7.1"
+refinitiv-data = "*"
 clarabel = "*"
-#yfinance = "^0.2.14"
-#wrds = "^3.1.6"
-#twelvedata = "^1.2.11"
-#graphviz = "^0.20.1"
-cvxsimulator = "0.9.18"
-#loguru = "*"
-#numpy_financial = "*"
-#mosek = "*"
-#cvxcovariance = "*"
+
+#
+#mosek = "^10.0.40"
+yfinance = "^0.2.14"
+wrds = "^3.1.6"
+twelvedata = "^1.2.11"
+graphviz = "^0.20.1"
+quantstats = "*"
+loguru = "*"
+numpy_financial = "*"
+mosek = "*"
+cvxcovariance = "*"
+
 
 [build-system]
 requires = ["poetry-core"]

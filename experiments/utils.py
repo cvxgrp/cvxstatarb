@@ -1,53 +1,92 @@
-import numpy as np
-from tqdm import tqdm
-import pandas as pd
-from cvx.stat_arb.ccp import construct_stat_arb
-from cvx.simulator.trading_costs import TradingCostModel
-from cvx.simulator.portfolio import EquityPortfolio
-from collections import namedtuple
-import matplotlib.pyplot as plt
-from typing import Any
-from dataclasses import dataclass
+import json
 import multiprocessing as mp
 
-import json
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+
+from cvx.simulator.portfolio import Portfolio
+from cvx.stat_arb.ccp import construct_stat_arb
 
 PERMNO_to_COMNAM = pd.read_csv("../data/PERMNO_to_COMNAM.csv", index_col=0)
 with open("../data/PERMNO_TO_SECTOR.json") as f:
     PERMNO_TO_SECTOR = json.load(f)
 
 
-def stat_arb_names2(cols):
-    for asset_name in cols:
-        try:
-            company = PERMNO_to_COMNAM.loc[int(asset_name)].COMNAM.iloc[0]
-        except AttributeError:
-            company = PERMNO_to_COMNAM.loc[int(asset_name)].COMNAM
-        sector = PERMNO_TO_SECTOR[asset_name]
-        print(f"{company}, {sector}")
-
-
-def matching_sector2(cols):
+def compute_drawdowns(navs):
     """
-    returns the fraction of stocks in stat-arb that has the same sector as some
-    other stock in the stat-arb
+    computes drawdowns from a time series of NAVs
     """
 
-    sectors = {}
+    max_nav = navs.cummax()
+    drawdowns = -(navs - max_nav) / max_nav
 
-    for asset in cols:
-        sector = PERMNO_TO_SECTOR[asset]
+    return drawdowns
 
-        if sector in sectors:
-            sectors[sector] += 1
-        else:
-            sectors[sector] = 1
 
-    counts = list(sectors.values())
+def compute_drawdowns_from_returns(returns):
+    """
+    computes drawdowns from a time series of NAVs
+    """
 
-    num_one_counts = np.sum([1 for x in counts if x == 1])
+    navs = (1 + returns).cumprod()
 
-    return 1 - num_one_counts / len(cols)
+    return compute_drawdowns(navs)
+
+
+def get_next_ewma(EWMA, y_last, t, beta, clip_at=None, min_periods=None):
+    """
+    param EWMA: EWMA at time t-1
+    param y_last: observation at time t-1
+    param t: current time step
+    param beta: EWMA exponential forgetting parameter
+    param clip_at: clip y_last at  +- clip_at*EWMA (optional)
+
+    returns: EWMA estimate at time t (note that this does not depend on y_t)
+    """
+
+    old_weight = (beta - beta**t) / (1 - beta**t)
+    new_weight = (1 - beta) / (1 - beta**t)
+
+    if clip_at:
+        assert min_periods, "min_periods must be specified if clip_at is specified"
+        if t >= min_periods + 2:
+            return old_weight * EWMA + new_weight * np.clip(
+                y_last, -clip_at * EWMA, clip_at * EWMA
+            )
+    return old_weight * EWMA + new_weight * y_last
+
+
+def ewma(y, halflife, clip_at=None, min_periods=None):
+    """
+    param y: array with measurements for times t=1,2,...,T=len(y)
+    halflife: EWMA half life
+    param clip_at: clip y_last at  +- clip_at*EWMA (optional)
+
+    returns: list of EWMAs for times t=2,3,...,T+1 = len(y)
+
+
+    Note: We define EWMA_t as a function of the
+    observations up to time t-1. This means that
+    y = [y_1,y_2,...,y_T] (for some T), while
+    EWMA = [EWMA_2, EWMA_3, ..., EWMA_{T+1}]
+    This way we don't get a "look-ahead bias" in the EWMA
+    """
+    times = [*y.keys()]
+    beta = np.exp(-np.log(2) / halflife)
+    EWMAs = {}
+    EWMAs[times[0]] = y[times[0]].fillna(0)
+
+    t = 1
+
+    for t_prev, t_curr in zip(times[:-1], times[1:]):  # First EWMA is for t=2
+        EWMAs[t_curr] = get_next_ewma(
+            EWMAs[t_prev], y[t_curr].fillna(0), t + 1, beta, clip_at, min_periods
+        )
+        t += 1
+
+    return EWMAs
 
 
 def matching_sector(stat_arb):
@@ -88,115 +127,94 @@ def stat_arb_names(stat_arb):
         print(f"{company}, {sector}")
 
 
-@dataclass(frozen=True)
-class SpreadCostModel(TradingCostModel):
-    spreads: pd.DataFrame
+def compute_trading_costs(trades, spreads):
+    volume = trades.abs()
 
-    def eval(
-        self, prices: pd.DataFrame, trades: pd.DataFrame, **kwargs: Any
-    ) -> pd.DataFrame:
-        volume = prices * trades
-        return 0.5 * self.spreads.loc[volume.index] * volume.abs()
+    if type(volume) == pd.Series:
+        assert type(spreads) == pd.Series, "spreads and trades must be of the same type"
+        assert (
+            trades.index == spreads.index
+        ).all(), "Index of trades and spreads must be the same"
 
+        return 0.5 * (spreads * volume).sum()
 
-def metrics(portfolios_after_cost, results):
-    means = []
-    stdevs = []
-    sharpes = []
-    profits = []
-    min_navs = []
-    min_cum_prof = []
-    drawdowns = []
+    elif type(volume) == pd.DataFrame:
+        assert (
+            type(spreads) == pd.DataFrame
+        ), "spreads and trades must be of the same type"
+        assert (
+            trades.index == spreads.index
+        ).all(), "Index of trades and spreads must be the same"
+        assert (
+            trades.columns == spreads.columns
+        ).all(), "Columns of trades and spreads must be the same"
 
-    for i, portfolio in tqdm(
-        enumerate(portfolios_after_cost), total=len(portfolios_after_cost)
-    ):
-        res = results[i]
+        return 0.5 * (spreads * volume).sum(axis=1)
 
-        exit_date = res.metrics.exit_date
-
-        nav = portfolio.nav.loc[:exit_date]
-        returns = nav.pct_change().loc[:exit_date]
-        means.append(returns.mean() * 250)
-        stdevs.append(returns.std() * np.sqrt(250))
-        sharpes.append(returns.mean() / returns.std() * np.sqrt(250))
-
-        min_navs.append(nav.min())
-
-        profit = portfolio.profit
-        profit -= portfolio.trading_costs.sum(axis=1)
-
-        ### Shorting cost
-        short_rate = 0.5 / 100 / 252  # half a percent per year
-        short_cost = (
-            portfolio.stocks[portfolio.stocks < 0].abs() * portfolio.prices
-        ).sum(axis=1) * short_rate
-        profit -= short_cost
-
-        profits.append(profit.sum())
-
-        min_cum_prof.append(profit.cumsum().min())
-
-        drawdowns.append(portfolio.drawdown.max())
-
-    means = pd.Series(means)
-    stdevs = pd.Series(stdevs)
-    sharpes = pd.Series(sharpes)
-    profits = pd.Series(profits)
-    min_navs = pd.Series(min_navs)
-    min_cum_prof = pd.Series(min_cum_prof)
-    drawdowns = pd.Series(drawdowns)
-
-    return pd.DataFrame(
-        {
-            "means": means,
-            "stdevs": stdevs,
-            "sharpes": sharpes,
-            "profits": profits,
-            "min_navs": min_navs,
-            "min_cum_prof": min_cum_prof,
-            "drawdowns": drawdowns,
-        }
-    )
+    else:
+        raise ValueError("trades and spreads must be a pd.Series or pd.DataFrame")
 
 
-def simulate(res, portfolio, trading_cost_model, lev_fraction):
+def simulate(res, portfolio, spreads, lev_fraction):
+    """
+    Simulates the stat-arb performance
+
+    param res: StatArbResult namedtuple (see backtest.py); includes stat_arb,
+    metrics, prices_train, prices_test
+    param portfolio: Portfolio object
+    param spreads: pd.DataFrame with spreads
+    param lev_fraction: initial cash is lev_fraction * lev0, where lev0 is the
+    initial (dollar) leverage
+    """
     stat_arb = res.stat_arb
+    exit_date = res.metrics.exit_date
+    assets = portfolio.units.columns
+    times = portfolio.units.loc[:exit_date].index
     lev0 = stat_arb.leverage(portfolio.prices).iloc[0]
 
+    ### Construct prices and stocks (units)
+    # hold only cash at day before entry date
     prices_train = res.prices_train
     prices_0 = prices_train.iloc[-1]
     prices_temp = pd.concat([pd.DataFrame(prices_0).T, portfolio.prices])
 
-    stocks_0 = portfolio.stocks.iloc[0] * 0
+    stocks_0 = portfolio.units.iloc[0] * 0
     stocks_0.name = prices_0.name
-    stocks_temp = pd.concat([pd.DataFrame(stocks_0).T, portfolio.stocks])
+    stocks_temp = pd.concat([pd.DataFrame(stocks_0).T, portfolio.units])
 
-    portfolio_temp = EquityPortfolio(
+    ### Construct stat arb portfolio
+    initial_cash = lev_fraction * lev0
+    portfolio_new = Portfolio(
         prices_temp,
-        stocks=stocks_temp,
-        trading_cost_model=trading_cost_model,
-        initial_cash=lev_fraction * lev0,
+        units=stocks_temp,
+        aum=initial_cash,
     )
 
     ### Shorting cost
     short_rate = 0.5 / 100 / 252  # half a percent per year
-    short_cost = (portfolio.stocks[portfolio.stocks < 0].abs() * portfolio.prices).sum(
+    short_costs = (portfolio.units[portfolio.units < 0].abs() * portfolio.prices).sum(
         axis=1
     ) * short_rate
 
-    navs = portfolio_temp.nav - short_cost.cumsum()
+    ### Trading costs
+    trading_costs = compute_trading_costs(
+        portfolio.trades_currency[assets].loc[times], spreads[assets].loc[times]
+    )
 
-    # navs = portfolio_temp.nav
-    positions = portfolio_temp.stocks
-    absolute_notionals = positions.abs() * portfolio_temp.prices
+    ### NAVs
+    navs = (portfolio_new.nav - short_costs.cumsum() - trading_costs.cumsum()).loc[
+        :exit_date
+    ]
+    positions = portfolio_new.units
+    absolute_notionals = positions.abs() * portfolio_new.prices
     long_positions = absolute_notionals[positions > 0].sum(axis=1)
     short_positions = absolute_notionals[positions < 0].sum(axis=1)
-    cash_position = portfolio_temp.cash
+    cash = portfolio_new.nav - portfolio_new.equity.sum(axis=1)
 
-    cash0 = cash_position.iloc[0]
-    bust_times1 = navs[navs < 0.5 * cash0]
-    bust_times2 = navs[long_positions + cash_position < short_positions]
+    ### Did we exit early?
+    cash0 = cash.iloc[0]
+    bust_times1 = navs[navs < 0.25 * cash0]
+    bust_times2 = navs[long_positions + cash < short_positions]
 
     bust_sort = None
 
@@ -229,14 +247,31 @@ def simulate(res, portfolio, trading_cost_model, lev_fraction):
         zeros = 0 * stocks_temp.loc[bust_time:].iloc[1:]
         stocks_temp = pd.concat([stocks_temp.loc[:bust_time], zeros], axis=0)
         print(f"\nPortfolio exited early at {bust_time}")
-        print(f"bust_sort: {bust_sort}")
+        if bust_sort == 1:
+            print("NAV fell below 0.5 * cash")
+        elif bust_sort == 2:
+            print("Long positions + cash fell below short position")
 
-    return EquityPortfolio(
-        prices_temp,
-        stocks=stocks_temp,
-        trading_cost_model=trading_cost_model,
-        initial_cash=lev_fraction * lev0,
-    )
+    ### Compute metrics
+    profits = (portfolio.profit - short_costs - trading_costs).loc[:exit_date]
+
+    if bust_time is not None:  # exit stat-arb at bust_time
+        navs.loc[bust_time:] = navs.loc[bust_time]
+        profits.loc[bust_time:] = 0
+
+    returns = navs.pct_change().loc[:exit_date]
+    mean = returns.mean() * 250
+    stdev = returns.std() * np.sqrt(250)
+    sharpe = returns.mean() / returns.std() * np.sqrt(250)
+    min_nav = navs.min()
+
+    mean_profit = profits.sum()
+    min_cum_prof = profits.cumsum().min()
+    drawdown = compute_drawdowns(navs).max()
+
+    went_bust = bust_time is not None
+
+    return mean, stdev, sharpe, mean_profit, min_nav, min_cum_prof, drawdown, went_bust
 
 
 def construct_stat_arbs(
@@ -244,16 +279,16 @@ def construct_stat_arbs(
     K=1,
     P_max=None,
     spread_max=1,
-    moving_mean=True,
+    moving_midpoint=True,
+    midpoint_memory=None,
     s_init=None,
     mu_init=None,
     seed=None,
-    solver="ECOS",
+    solver="CLARABEL",
     verbose=True,
 ):
     if seed is not None:
         np.random.seed(seed)
-    # np.random.seed(1)
 
     all_seeds = list(np.random.choice(range(10 * K), K, replace=False))
 
@@ -261,27 +296,48 @@ def construct_stat_arbs(
         [prices] * K,
         [P_max] * K,
         [spread_max] * K,
-        [moving_mean] * K,
+        [moving_midpoint] * K,
+        [midpoint_memory] * K,
         [s_init] * K,
         [mu_init] * K,
         all_seeds,
         [solver] * K,
     )
 
+    # pool = mp.Pool()
+    # all_stat_arbs = []
+
+    # if verbose:
+    #     iterator = tqdm(
+    #         pool.imap_unordered(construct_stat_arb_helper, all_args), total=K
+    #     )
+    # else:
+    #     iterator = pool.imap_unordered(construct_stat_arb_helper, all_args)
+
+    # for stat_arb in iterator:
+    #     all_stat_arbs.append(stat_arb)
+    # pool.close()
+    # pool.join()
+
     pool = mp.Pool()
     all_stat_arbs = []
 
-    if verbose:
-        iterator = tqdm(
-            pool.imap_unordered(construct_stat_arb_helper, all_args), total=K
-        )
-    else:
-        iterator = pool.imap_unordered(construct_stat_arb_helper, all_args)
+    try:
+        if verbose:
+            iterator = tqdm(
+                pool.imap_unordered(construct_stat_arb_helper, all_args), total=K
+            )
+        else:
+            iterator = pool.imap_unordered(construct_stat_arb_helper, all_args)
 
-    for stat_arb in iterator:
-        all_stat_arbs.append(stat_arb)
-    pool.close()
-    pool.join()
+        for stat_arb in iterator:
+            all_stat_arbs.append(stat_arb)
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt caught, terminating workers...")
+        pool.terminate()
+    finally:
+        pool.close()  # Make sure no more tasks are submitted to the pool
+        pool.join()
 
     # remove None
     all_stat_arbs = [x for x in all_stat_arbs if x is not None]
@@ -298,124 +354,15 @@ def construct_stat_arb_helper(args):
     return construct_stat_arb(*args)
 
 
-StatArbResult = namedtuple(
-    "StatArbResult", ["stat_arb", "metrics", "prices_train", "prices_test"]
-)
-
-
-def run_backtest(
-    prices_full,
-    market_cap,
-    spreads,
-    P_max,
-    moving_mean,
-    T_max,
-):
-    np.random.seed(0)  # for reproducibility
-
-    trading_cost_model = SpreadCostModel(spreads)
-    n_stocks = 200
-    remaining_to_stop = 125
-
-    K = 10
-    spread_max = 1
-
-    train_len = 500 + 21
-    update_freq = 21
-    solver = "CLARABEL"
-
-    t_start = 0
-    t_end = len(prices_full)
-
-    portfolios = []
-
-    n_iters = int((t_end - (train_len + 1) - t_start - remaining_to_stop) / update_freq)
-
-    results = []
-
-    seeds = [np.random.randint(9999) for _ in range(2 * n_iters)]
-    i = 1
-    while t_start < t_end - (train_len + 1) - remaining_to_stop:
-        if i % 10 == 0:
-            print(f"{i/n_iters:.0%}", end=" ")
-        i += 1
-
-        time = t_start + train_len
-        # get 200 largest stocks at time-1
-        assets = (
-            market_cap.iloc[time - 1].sort_values(ascending=False).iloc[:n_stocks].index
-        )
-        prices = prices_full[assets]
-
-        ### Get data, clean over train and val
-        prices_train = prices.iloc[t_start : t_start + train_len]
-        prices_test = prices.iloc[time:]
-
-        ### Find stat-arbs
-        seed = seeds[i]
-        stat_arbs = construct_stat_arbs(
-            prices_train,
-            K=K,
-            P_max=P_max,
-            spread_max=spread_max,
-            moving_mean=moving_mean,
-            seed=seed,
-            solver=solver,
-            verbose=False,
-        )
-
-        new_stat_arb_results = []
-        asset_names_found = []
-        for stat_arb in stat_arbs:
-            if set(stat_arb.asset_names) in asset_names_found:
-                continue
-            else:
-                asset_names_found.append(set(stat_arb.asset_names))
-
-            if stat_arb is None:
-                continue
-
-            prices_train_test = pd.concat([prices_train, prices_test], axis=0)
-            p = prices_train_test[stat_arb.asset_names] @ stat_arb.stocks
-
-            if stat_arb.moving_mean:
-                mu = p.rolling(stat_arb.mu_memory).mean()
-                mu = mu.iloc[-len(prices_test) :]
-            else:
-                mu = stat_arb.mu
-
-            # prices_test = pd.concat([prices_val, prices_test], axis=0)
-            m = stat_arb.metrics(prices_test, mu, T_max=T_max)
-
-            if m is not None:
-                new_stat_arb_results.append(
-                    StatArbResult(stat_arb, m, prices_train, prices_test)
-                )
-            else:
-                pass
-
-            ### Construct stat arb portfolio
-            positions = stat_arb.get_positions(prices_test, mu, T_max=T_max)
-            portfolio = EquityPortfolio(
-                prices_test, stocks=positions, trading_cost_model=trading_cost_model
-            )
-            if m is not None:
-                portfolios.append(portfolio)
-
-        results += new_stat_arb_results
-
-        ### Update t_start
-        t_start += update_freq
-    print(f"\nFinished after {i} iterations")
-    return results, portfolios
-
-
 def plot_stat_arb(
     stat_arb_tuple, insample_bound, outsample_bound, spreads, legend=True
 ):
     stat_arb = stat_arb_tuple.stat_arb
 
-    mu_memory = stat_arb.mu_memory
+    # print stat-arb companies
+    stat_arb_names(stat_arb)
+
+    midpoint_memory = stat_arb.midpoint_memory
     asset_names = stat_arb.asset_names
     stocks = stat_arb.stocks
 
@@ -429,19 +376,21 @@ def plot_stat_arb(
 
     p_train = prices_train[asset_names] @ stocks
 
-    if stat_arb.moving_mean:
-        mu_train = p_train.rolling(mu_memory).mean().dropna()
+    if stat_arb.moving_midpoint:
+        mu_train = p_train.rolling(midpoint_memory).mean().dropna()
     else:
         mu_train = stat_arb.mu
 
-    prices_train_test = pd.concat([prices_train, prices_test], axis=0).iloc[
-        -len(prices_test) - mu_memory + 1 :
-    ]
-
     p_test = prices_test[asset_names] @ stocks
-    if stat_arb.moving_mean:
+    if stat_arb.moving_midpoint:
+        prices_train_test = pd.concat([prices_train, prices_test], axis=0).iloc[
+            -len(prices_test) - midpoint_memory + 1 :
+        ]
         mu_test = (
-            (prices_train_test[asset_names] @ stocks).rolling(mu_memory).mean().dropna()
+            (prices_train_test[asset_names] @ stocks)
+            .rolling(midpoint_memory)
+            .mean()
+            .dropna()
         )
     else:
         mu_test = stat_arb.mu
@@ -455,11 +404,11 @@ def plot_stat_arb(
     plt.figure()
     plt.plot(p_train, color="b", label="In-sample")
 
-    if stat_arb.moving_mean:
+    if stat_arb.moving_midpoint:
         plt.plot(mu_train, color="g")
 
     plt.plot(p_test.loc[:elim_end], color="r", label="Out-of-sample")
-    if stat_arb.moving_mean:
+    if stat_arb.moving_midpoint:
         plt.plot(mu_test.loc[:elim_end], color="g", label="Midpoint" + r" $(\mu_t)$")
     else:
         plt.plot(
@@ -474,18 +423,18 @@ def plot_stat_arb(
     stocks_str = ""
     for i in range(stocks.shape[0]):
         if i == 0:
-            if stocks[i] > 0:
-                stocks_str += f"{np.round(stocks[i], 1)}" + "×" + asset_names[i]
+            if stocks.iloc[i] > 0:
+                stocks_str += f"{np.round(stocks.iloc[i], 1)}" + "×" + asset_names[i]
             else:
                 stocks_str += (
-                    f"-{np.abs(np.round(stocks[i], 1))}" + "×" + asset_names[i]
+                    f"-{np.abs(np.round(stocks.iloc[i], 1))}" + "×" + asset_names[i]
                 )
         else:
-            if stocks[i] > 0:
-                stocks_str += f"+{np.round(stocks[i], 1)}" + "×" + asset_names[i]
+            if stocks.iloc[i] > 0:
+                stocks_str += f"+{np.round(stocks.iloc[i], 1)}" + "×" + asset_names[i]
             else:
                 stocks_str += (
-                    f"-{np.abs(np.round(stocks[i], 1))}" + "×" + asset_names[i]
+                    f"-{np.abs(np.round(stocks.iloc[i], 1))}" + "×" + asset_names[i]
                 )
 
     print("stat-arb: ", stocks_str)
@@ -508,7 +457,7 @@ def plot_stat_arb(
         plt.axvline(exit_date, linestyle="--", color="k", linewidth=2)
 
     ## plot horizontal line at +- insample_bound over training period
-    if stat_arb.moving_mean:
+    if stat_arb.moving_midpoint:
         band_label = r"$\mu_t\pm 1$"
 
         if outsample_bound is not np.inf:
@@ -588,7 +537,7 @@ def plot_stat_arb(
 
     plt.plot(p_train - mu_train, color="b")
 
-    if stat_arb.moving_mean:
+    if stat_arb.moving_midpoint:
         plt.plot(p_test.loc[:elim_end] - mu_test.loc[:elim_end], color="r")
 
     else:
@@ -602,16 +551,16 @@ def plot_stat_arb(
 
     plt.show()
 
-    # evaluate stat arb metrics on prices train and test
+    ### evaluate stat arb metrics on prices train and test
 
     plt.figure()
     prices_train, prices_test = stat_arb_tuple.prices_train, stat_arb_tuple.prices_test
 
     prices_train_test = pd.concat([prices_train, prices_test], axis=0)
-    if stat_arb.moving_mean:
+    if stat_arb.moving_midpoint:
         mu = (
             stat_arb.evaluate(prices_train_test)
-            .rolling(mu_memory, min_periods=1)
+            .rolling(midpoint_memory, min_periods=1)
             .mean()
         )
 
@@ -621,27 +570,30 @@ def plot_stat_arb(
 
     #### TESTING
 
-    if stat_arb.moving_mean:
+    if stat_arb.moving_midpoint:
         mu = mu
     else:
         mu = stat_arb.mu
 
     ### Construct stat arb portfolio
-    # prices_temp = pd.concat([prices_train, prices_test], axis=0)
     positions = stat_arb.get_positions(prices_train_test, mu, T_max=1e6)
-    trading_cost_model = SpreadCostModel(spreads)
-    portfolio = EquityPortfolio(
-        prices_train_test, stocks=positions, trading_cost_model=trading_cost_model
-    )
+    initial_cash = 1e6
+    aum = initial_cash + (prices_train_test.iloc[0] * positions).sum(axis=1)
+
+    portfolio = Portfolio(prices_train_test, units=positions, aum=aum)
     profit = portfolio.profit
-    profit -= portfolio.trading_costs.sum(axis=1)
+    times = portfolio.units.index
+    assets = portfolio.units.columns
+    trading_costs = compute_trading_costs(
+        portfolio.trades_currency[assets], spreads[assets].loc[times]
+    )
 
     ### Shorting cost
     short_rate = 0.5 / 100 / 252  # half a percent per year
-    short_cost = (portfolio.stocks[portfolio.stocks < 0].abs() * portfolio.prices).sum(
+    short_costs = (portfolio.units[portfolio.units < 0].abs() * portfolio.prices).sum(
         axis=1
     ) * short_rate
-    profit -= short_cost
+    profit = profit - short_costs - trading_costs
 
     profits_train = profit.loc[: prices_train.index[-1]]
     profits_test = profit.loc[prices_test.index[0] :]
