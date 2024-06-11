@@ -21,7 +21,7 @@ pytest-cov = "*"
 
 seaborn = "^0.13.2"
 dask = "^2023.9.0"
-tqdm = "^4.65.0"
+tqdm = "^4.66.4"
 matplotlib = "^3.9.0"
 refinitiv-data = "*"
 clarabel = "*"
