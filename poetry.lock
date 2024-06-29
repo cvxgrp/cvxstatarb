@@ -1651,6 +1651,22 @@ typing = ["typing-extensions"]
 xmp = ["defusedxml"]
 
 [[package]]
+name = "platformdirs"
+version = "4.2.2"
+description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "platformdirs-4.2.2-py3-none-any.whl", hash = "sha256:2d7a1657e36a80ea911db832a8a6ece5ee53d8de21edd5cc5879af6530b1bfee"},
+    {file = "platformdirs-4.2.2.tar.gz", hash = "sha256:38b7b51f512eed9e84a22788b4bce1de17c0adb134d6becb09836e37d8654cd3"},
+]
+
+[package.extras]
+docs = ["furo (>=2023.9.10)", "proselint (>=0.13)", "sphinx (>=7.2.6)", "sphinx-autodoc-typehints (>=1.25.2)"]
+test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=7.4.3)", "pytest-cov (>=4.1)", "pytest-mock (>=3.12)"]
+type = ["mypy (>=1.8)"]
+
+[[package]]
 name = "plotly"
 version = "5.20.0"
 description = "An open-source, interactive data visualization library for Python"
@@ -2731,17 +2747,16 @@ sqlalchemy = ">=2,<2.1"
 
 [[package]]
 name = "yfinance"
-version = "0.2.37"
+version = "0.2.40"
 description = "Download market data from Yahoo! Finance API"
 optional = false
 python-versions = "*"
 files = [
-    {file = "yfinance-0.2.37-py2.py3-none-any.whl", hash = "sha256:3ac75fa1cd3496ee76b6df5d63d29679487ea9447123c5b935d1593240737a8f"},
-    {file = "yfinance-0.2.37.tar.gz", hash = "sha256:e5f78c9bd27bae7abfd0af9b7996620eaa9aba759d67f957296634d7d54f0cef"},
+    {file = "yfinance-0.2.40-py2.py3-none-any.whl", hash = "sha256:328176b5690de7aa192456a15b351c20ddde31b35d479f8179f5325bd340fc0b"},
+    {file = "yfinance-0.2.40.tar.gz", hash = "sha256:b053ac31229b5dc7f49a17a057f66aa7f688de2f5ddeb95c2455ec13cd89511a"},
 ]
 
 [package.dependencies]
-appdirs = ">=1.4.4"
 beautifulsoup4 = ">=4.11.1"
 frozendict = ">=2.3.4"
 html5lib = ">=1.1"
@@ -2750,6 +2765,7 @@ multitasking = ">=0.0.7"
 numpy = ">=1.16.5"
 pandas = ">=1.3.0"
 peewee = ">=3.16.2"
+platformdirs = ">=2.0.0"
 pytz = ">=2022.5"
 requests = ">=2.31"
 
@@ -2775,4 +2791,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9, <3.12"
-content-hash = "587f35484ac09fc54a4df2e636530c2feb6282041235398e95695925e51a8701"
+content-hash = "84eaabd91ec0fbd8ebca9a2f44513495882d0d9db49c4214d2f6e5965331d703"
