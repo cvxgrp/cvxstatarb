@@ -20,7 +20,7 @@ pytest-cov = "*"
 #jupyter = "^1.0.0"
 
 seaborn = "^0.13.2"
-dask = "^2023.9.0"
+dask = "^2024.6.2"
 tqdm = "^4.66.4"
 matplotlib = "^3.9.0"
 refinitiv-data = "*"
