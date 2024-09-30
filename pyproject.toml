@@ -29,7 +29,7 @@ clarabel = "*"
 #
 #mosek = "^10.0.40"
 yfinance = "^0.2.40"
-wrds = "^3.1.6"
+wrds = "^3.2.0"
 twelvedata = "^1.2.18"
 graphviz = "^0.20.1"
 quantstats = "*"
