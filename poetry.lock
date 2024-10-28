@@ -2346,13 +2346,13 @@ scipy = ">=0.13.2"
 
 [[package]]
 name = "quantstats"
-version = "0.0.62"
+version = "0.0.64"
 description = "Portfolio analytics for quants"
 optional = false
 python-versions = "*"
 files = [
-    {file = "QuantStats-0.0.62-py2.py3-none-any.whl", hash = "sha256:5b549d41d9edb2260ddc437440acfbb4e89cfe5388bc614247d61ec19bcdff10"},
-    {file = "QuantStats-0.0.62.tar.gz", hash = "sha256:64d8fa6284599c70d407debafbbc368b0d03bc67374ffdb4b4a0d19b335ef965"},
+    {file = "QuantStats-0.0.64-py2.py3-none-any.whl", hash = "sha256:2dc6c2c54e0d879fc31e854c6015047366e30042d01892e127dcb07797e91107"},
+    {file = "quantstats-0.0.64.tar.gz", hash = "sha256:a1e2533d751805d47303d8c053192fca12820b06f38b6a171bda2177ac8824cf"},
 ]
 
 [package.dependencies]
