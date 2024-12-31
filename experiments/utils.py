@@ -130,21 +130,17 @@ def stat_arb_names(stat_arb):
 def compute_trading_costs(trades, spreads):
     volume = trades.abs()
 
-    if type(volume) == pd.Series:
-        assert type(spreads) == pd.Series, "spreads and trades must be of the same type"
+    if isinstance(volume, pd.Series):
+        assert isinstance(spreads, pd.Series), "spreads and trades must be of the same type"
         assert (
             trades.index == spreads.index
         ).all(), "Index of trades and spreads must be the same"
 
         return 0.5 * (spreads * volume).sum()
 
-    elif type(volume) == pd.DataFrame:
-        assert (
-            type(spreads) == pd.DataFrame
-        ), "spreads and trades must be of the same type"
-        assert (
-            trades.index == spreads.index
-        ).all(), "Index of trades and spreads must be the same"
+    elif isinstance(volume, pd.DataFrame):
+        assert isinstance(spreads, pd.DataFrame), "spreads and trades must be of the same type"
+        assert (trades.index == spreads.index).all(), "Index of trades and spreads must be the same"
         assert (
             trades.columns == spreads.columns
         ).all(), "Columns of trades and spreads must be the same"

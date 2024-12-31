@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "cvx"}]
 
 [tool.poetry.dependencies]
-python = "^3.9, <3.12"
+python = "^3.9, <3.13"
 numpy = "*"
 cvxpy = "*"
 #pandas = "^2.0.0"
