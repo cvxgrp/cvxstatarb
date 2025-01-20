@@ -2929,13 +2929,13 @@ sqlalchemy = ">=2,<2.1"
 
 [[package]]
 name = "yfinance"
-version = "0.2.51"
+version = "0.2.52"
 description = "Download market data from Yahoo! Finance API"
 optional = false
 python-versions = "*"
 files = [
-    {file = "yfinance-0.2.51-py2.py3-none-any.whl", hash = "sha256:d5cc7a970bb4bb43e4deee853514cbaa3c2b070a0dee6b2861c1ab5076f21dc1"},
-    {file = "yfinance-0.2.51.tar.gz", hash = "sha256:7902cc9b23699a51efa50f1cc7a965220a56beccc00d189f929b4c7c5c189a60"},
+    {file = "yfinance-0.2.52-py2.py3-none-any.whl", hash = "sha256:3ca150da85f56b999687e13b72304338499a417d5bad6af9da2aa13821992bd7"},
+    {file = "yfinance-0.2.52.tar.gz", hash = "sha256:d2c2ed9bc935596934cba99fca0f05beaa8384648f78105c77754e92f11bf72f"},
 ]
 
 [package.dependencies]
@@ -2977,4 +2977,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9, <3.12"
-content-hash = "3d3d5d93fc6748a6afaa1cc365e721c29a6a80358f01024e5700123743f0b506"
+content-hash = "0b8dc13da5e98fad4d1da2ac8d55ef77907d1181b87ba43ea4d848aae50702f6"
