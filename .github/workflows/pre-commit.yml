@@ -1,12 +1,23 @@
 name: pre-commit
 
+permissions:
+  contents: read
+
 on:
-  pull_request:
   push:
 
 jobs:
+  deptry:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Build the virtual environment for ${{ github.repository }}"
+        uses: cvxgrp/.github/actions/uv/environment@v2.1.1
+
+      - uses: cvxgrp/.github/actions/deptry@v2.1.1
+
+
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: pre-commit/action@v3.0.1
+      - uses: cvxgrp/.github/actions/pre-commit@v2.1.1
