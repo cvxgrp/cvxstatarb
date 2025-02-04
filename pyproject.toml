@@ -12,11 +12,6 @@ dependencies = [
     "scikit-learn>=1.6.1",
 ]
 
-
-[tool.poetry.dependencies]
-cvxsimulator = "*"
-scikit-learn = "*"
-
 [tool.poetry.dev-dependencies]
 pytest = "8.3.4"
 pytest-cov = "*"
