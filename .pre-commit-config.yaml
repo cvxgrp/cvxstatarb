@@ -12,10 +12,11 @@ repos:
       - id: black
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.0.286'
+    rev: 'v0.9.4'
     hooks:
       - id: ruff
         args: [ --fix, --exit-non-zero-on-fix ]
+        files: ^cvx/
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.35.0
@@ -37,9 +38,3 @@ repos:
 
       - id: check-github-workflows
         args: ["--verbose"]
-
-  - repo: https://github.com/python-poetry/poetry
-    rev: '1.6.1'  # add version here
-    hooks:
-      - id: poetry-check
-      # - id: poetry-lock
