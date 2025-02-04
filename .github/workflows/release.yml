@@ -1,23 +1,39 @@
-name: Upload Python Package
+name: Bump version and publish
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: cvxgrp/.github/actions/build@v1.4.0
+  tag:
+    permissions:
+      contents: write
 
-  deploy:
     runs-on: ubuntu-latest
-    needs: build
+
+    steps:
+      - name: "Build the virtual environment for ${{ github.repository }}"
+        uses: cvxgrp/.github/actions/uv/environment@v2.1.0
+
+      - name: Generate Tag
+        uses: cvxgrp/.github/actions/tag@v2.1.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: tag
+    runs-on: ubuntu-latest
     environment: release
 
     permissions:
+      contents: read
       # This permission is required for trusted publishing.
       id-token: write
 
     steps:
-      - uses: cvxgrp/.github/actions/publish@v1.4.0
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
