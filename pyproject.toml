@@ -7,13 +7,13 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "cvxpy>=1.6.0",
+    "cvxsimulator>=1.3.8",
     "numpy>=2.2.2",
+    "scikit-learn>=1.6.1",
 ]
 
 
 [tool.poetry.dependencies]
-cvxpy = "*"
-#pandas = "^2.0.0"
 cvxsimulator = "*"
 scikit-learn = "*"
 
