@@ -242,7 +242,8 @@ class LinearArbitrage(Policy):
             """ record last search timestamp """
             self.last_search = t
             """ rank asset by market cap to narrow down arb search space """
-            partial_assets = current_prices.index
+            market_cap = current_prices * past_volumes.iloc[-1]
+            partial_assets = market_cap.sort_values(ascending=False).index
             new_stat_arbs = construct_stat_arb_parallel(
                 prices_train[partial_assets],
                 K=self.parallel_K,
@@ -250,7 +251,6 @@ class LinearArbitrage(Policy):
                 spread_max=1,
                 moving_midpoint=self.moving_midpoint,
                 midpoint_memory=self.midpoint_memory,
-                seed=1,
                 solver="CLARABEL")
             for arb_item in new_stat_arbs:
                 arb_key = frozenset(set(arb_item.asset_names))
@@ -344,13 +344,12 @@ def main():
                 datasource=yfin_latest)
 
     simulator = StockMarketSimulator(market_data=market_data)
-
     policy = LinearArbitrage(CASH_KEY)
 
     result = simulator.backtest(
         policy, 
         start_time='2024-1-1',
-        end_time='2024-12-31')
+        end_time='2025-1-1')
 
     print(result)
 
