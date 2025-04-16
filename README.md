@@ -33,7 +33,7 @@ will install and start the jupyter lab.
 If you want to reference our work in your research, please consider using the following BibTeX for the citations:
 
 ```BibTeX
-@article{johansson_finding2024,
+@article{johansson2024finding,
   author    = {K. Johansson and T. Schmelzer and S. Boyd},
   title     = {Finding moving-band statistical arbitrages via convex--concave optimization},
   journal   = {Optimization and Engineering},
