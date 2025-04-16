@@ -27,3 +27,20 @@ make jupyter
 ```
 
 will install and start the jupyter lab.
+
+## Citation
+
+If you want to reference our work in your research, please consider using the following BibTeX for the citation:
+
+```BibTeX
+@article{johansson_finding2024,
+  author    = {K. Johansson and T. Schmelzer and S. Boyd},
+  title     = {Finding moving-band statistical arbitrages via convex--concave optimization},
+  journal   = {Optimization and Engineering},
+  year      = {2024},
+  doi       = {10.1007/s11081-024-09933-0},
+}
+```
+
+
+
