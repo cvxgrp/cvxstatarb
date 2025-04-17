@@ -30,7 +30,8 @@ will install and start the jupyter lab.
 
 ## Citation
 
-If you want to reference our work in your research, please consider using the following BibTeX for the citations:
+If you want to reference our work in your research, 
+please consider using the following BibTeX for the citations:
 
 ```BibTeX
 @article{johansson2024finding,
