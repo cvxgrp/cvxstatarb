@@ -30,7 +30,8 @@ will install and start the jupyter lab.
 
 ## Citation
 
-If you want to reference our work in your research, please consider using the following BibTeX for the citations:
+If you want to reference our work in your research,
+please consider using the following BibTeX for the citations:
 
 ```BibTeX
 @article{johansson2024finding,
@@ -41,17 +42,16 @@ If you want to reference our work in your research, please consider using the fo
   doi       = {10.1007/s11081-024-09933-0},
 }
 ```
+
 and
+
 ```BibTeX
 @article{johansson2024basket,
   author       = {K. Johansson and T. Schmelzer and S. Boyd},
-  title        = {A Markowitz Approach to Managing a Dynamic Basket of Moving-Band Statistical Arbitrages},
+  title        = {A Markowitz Approach to Managing a
+                  Dynamic Basket of Moving-Band Statistical Arbitrages},
   journal      = {arXiv preprint arXiv:2412.02660},
   year         = {2024},
   doi          = {10.48550/arXiv.2412.02660}
 }
 ```
-
-
-
-
