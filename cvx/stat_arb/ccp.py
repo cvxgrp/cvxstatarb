@@ -10,9 +10,7 @@ import pandas as pd
 from tqdm import tqdm
 
 # Filter out the specific UserWarning
-warnings.filterwarnings(
-    "ignore", message="Solution may be inaccurate.", category=UserWarning
-)
+warnings.filterwarnings("ignore", message="Solution may be inaccurate.", category=UserWarning)
 warnings.filterwarnings(
     "ignore",
     message="Solution may be inaccurate.\
@@ -187,9 +185,7 @@ class _State:
         self.spread_max = spread_max
 
         if self.moving_midpoint:
-            self.P_bar = (
-                prices.iloc[midpoint_memory:].mean(axis=0).values.reshape(-1, 1)
-            )
+            self.P_bar = prices.iloc[midpoint_memory:].mean(axis=0).values.reshape(-1, 1)
         else:
             self.P_bar = prices.mean(axis=0).values.reshape(-1, 1)
 
@@ -198,20 +194,12 @@ class _State:
         # Construct linearized convex-concave problem
         self.grad_g = cp.Parameter((self.T, 1), name="grad_g")
 
-        self.obj = cp.Maximize(
-            self.grad_g[midpoint_memory:].T @ self.p[midpoint_memory:]
-        )
+        self.obj = cp.Maximize(self.grad_g[midpoint_memory:].T @ self.p[midpoint_memory:])
 
         if self.moving_midpoint:
-            self.cons = [
-                cp.abs(self.p[midpoint_memory:] - self.mu[midpoint_memory:])
-                <= self.spread_max
-            ]
+            self.cons = [cp.abs(self.p[midpoint_memory:] - self.mu[midpoint_memory:]) <= self.spread_max]
 
-            self.cons += [
-                self.p[midpoint_memory:]
-                == self.prices.values[midpoint_memory:] @ self.s
-            ]
+            self.cons += [self.p[midpoint_memory:] == self.prices.values[midpoint_memory:] @ self.s]
         else:
             self.cons = [cp.abs(self.p - self.mu) <= self.spread_max]
             self.cons += [self.p == self.prices.values @ self.s]
@@ -220,18 +208,14 @@ class _State:
             ################################################################
             conv_arr = 1 / midpoint_memory * np.ones(midpoint_memory)
             conv_correction = np.array(
-                [midpoint_memory / (i + 1) for i in range(midpoint_memory - 1)]
-                + [1] * (self.T - midpoint_memory + 1)
+                [midpoint_memory / (i + 1) for i in range(midpoint_memory - 1)] + [1] * (self.T - midpoint_memory + 1)
             )
 
-            conv = cp.multiply(
-                cp.convolve(conv_arr, self.p.flatten())[: self.T], conv_correction
-            )
+            conv = cp.multiply(cp.convolve(conv_arr, self.p.flatten())[: self.T], conv_correction)
 
             norm_constant = 1 / conv_arr[-1] * 100  # for numerical stability
             self.cons += [
-                norm_constant * self.mu.flatten()[midpoint_memory:]
-                == norm_constant * conv[midpoint_memory:]
+                norm_constant * self.mu.flatten()[midpoint_memory:] == norm_constant * conv[midpoint_memory:]
             ]  # 100 for numerical stability
         ################################################################
         else:
@@ -429,9 +413,7 @@ class StatArb:
         weights = np.array(weights)[::-1]
 
         length = len(q[exit_index : exit_index + exit_length])
-        q[exit_index : exit_index + exit_length] = (
-            q[exit_index : exit_index + exit_length] * weights[:length]
-        )
+        q[exit_index : exit_index + exit_length] = q[exit_index : exit_index + exit_length] * weights[:length]
 
         q[exit_index + exit_length :] = 0
         q.iloc[-1] = 0
@@ -746,8 +728,7 @@ class StatArbManager:
             alpha.values @ q
             - gamma_turn * kappa_spread[tradeable_assets].values @ trades
             # - gamma_cash_neutral * cp.abs(h @ latest_prices.values)
-            - gamma_arb_to_asset
-            * cp.norm1(cp.multiply(latest_prices, h - stocks_stacked.values @ q))
+            - gamma_arb_to_asset * cp.norm1(cp.multiply(latest_prices, h - stocks_stacked.values @ q))
         )
 
         ### constraints
@@ -761,8 +742,7 @@ class StatArbManager:
         if eta > 1:
             constraints += [cash >= (eta - 1) * cp.neg(h) @ latest_prices.values]
         constraints += [
-            cp.multiply(cp.abs(q), cp.abs(stat_arb_prices.values))
-            <= xi * cash * stat_arb_multipliers.values
+            cp.multiply(cp.abs(q), cp.abs(stat_arb_prices.values)) <= xi * cash * stat_arb_multipliers.values
         ]
 
         problem = cp.Problem(objective, constraints)

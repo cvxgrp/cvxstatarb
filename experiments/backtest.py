@@ -9,9 +9,7 @@ from cvx.simulator.builder import Builder
 from cvx.simulator.portfolio import Portfolio
 from cvx.stat_arb.ccp import StatArbManager
 
-StatArbResult = namedtuple(
-    "StatArbResult", ["stat_arb", "metrics", "prices_train", "prices_test"]
-)
+StatArbResult = namedtuple("StatArbResult", ["stat_arb", "metrics", "prices_train", "prices_test"])
 
 
 def _find_and_filter_stat_arbs(
@@ -67,9 +65,7 @@ def _find_and_filter_stat_arbs(
         m = stat_arb.metrics(prices_test, mu, T_max=T_max)
 
         if m is not None:
-            stat_arb_results.append(
-                StatArbResult(stat_arb, m, prices_train, prices_test)
-            )
+            stat_arb_results.append(StatArbResult(stat_arb, m, prices_train, prices_test))
         else:
             pass
 
@@ -123,14 +119,12 @@ def run_finding_backtest(
     i = 1
     while t_start < t_end - (train_len + 1) - remaining_to_stop:
         if i % 10 == 0:
-            print(f"{i/n_iters:.0%}", end=" ")
+            print(f"{i / n_iters:.0%}", end=" ")
         i += 1
 
         time = t_start + train_len
         ### get 200 largest stocks at time-1 ###
-        assets = (
-            market_cap.iloc[time - 1].sort_values(ascending=False).iloc[:n_stocks].index
-        )
+        assets = market_cap.iloc[time - 1].sort_values(ascending=False).iloc[:n_stocks].index
         prices = prices_full[assets]
 
         ### Get data, clean over train and val ###
@@ -315,12 +309,7 @@ def run_portfolio_backtest(
 
         if iteration % update_freq == 0:  # find stat-arbs every update_freq days
             # get n_stocks largest stocks at time-1
-            assets = (
-                market_cap.iloc[time - 1]
-                .sort_values(ascending=False)
-                .iloc[:n_stocks]
-                .index
-            )
+            assets = market_cap.iloc[time - 1].sort_values(ascending=False).iloc[:n_stocks].index
             prices_temp = prices[assets]
             ### Get data, clean over train and test ###
             prices_train = prices_temp.iloc[time - train_len : time]
@@ -357,9 +346,7 @@ def run_portfolio_backtest(
         active_stat_arbs = manager.active_stat_arbs[date_time]
 
         asset_names = manager._all_asset_names(active_stat_arbs)
-        tradeable_assets, _ = _get_tradable_assets(
-            prices[asset_names].loc[:date_time].iloc[-21:], covariance
-        )
+        tradeable_assets, _ = _get_tradable_assets(prices[asset_names].loc[:date_time].iloc[-21:], covariance)
         (
             quantities_new,
             weights_new,
@@ -493,9 +480,7 @@ def run_portfolio_backtest_from_manager(
         active_stat_arbs = manager.active_stat_arbs[date_time]
 
         asset_names = manager._all_asset_names(active_stat_arbs)
-        tradeable_assets, _ = _get_tradable_assets(
-            prices[asset_names].loc[:date_time].iloc[-21:], covariance
-        )
+        tradeable_assets, _ = _get_tradable_assets(prices[asset_names].loc[:date_time].iloc[-21:], covariance)
         (
             quantities_new,
             weights_new,
@@ -532,9 +517,7 @@ def run_portfolio_backtest_from_manager(
         holdings.loc[date_time] = quantities_new
         all_weights.loc[date_time] = weights_new
         cash = state.cash + interest_and_fees.sum() - trading_costs.sum()
-        value = (
-            cash + quantities_new @ prices.loc[date_time]
-        )  # value and cash should be same, due to cash-neutrality
+        value = cash + quantities_new @ prices.loc[date_time]  # value and cash should be same, due to cash-neutrality
         cashs.loc[date_time] = cash
         values.loc[date_time] = value
         all_stat_arb_quantities.append(stat_arb_quantities)

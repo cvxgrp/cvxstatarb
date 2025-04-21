@@ -52,9 +52,7 @@ def get_next_ewma(EWMA, y_last, t, beta, clip_at=None, min_periods=None):
     if clip_at:
         assert min_periods, "min_periods must be specified if clip_at is specified"
         if t >= min_periods + 2:
-            return old_weight * EWMA + new_weight * np.clip(
-                y_last, -clip_at * EWMA, clip_at * EWMA
-            )
+            return old_weight * EWMA + new_weight * np.clip(y_last, -clip_at * EWMA, clip_at * EWMA)
     return old_weight * EWMA + new_weight * y_last
 
 
@@ -81,9 +79,7 @@ def ewma(y, halflife, clip_at=None, min_periods=None):
     t = 1
 
     for t_prev, t_curr in zip(times[:-1], times[1:]):  # First EWMA is for t=2
-        EWMAs[t_curr] = get_next_ewma(
-            EWMAs[t_prev], y[t_curr].fillna(0), t + 1, beta, clip_at, min_periods
-        )
+        EWMAs[t_curr] = get_next_ewma(EWMAs[t_prev], y[t_curr].fillna(0), t + 1, beta, clip_at, min_periods)
         t += 1
 
     return EWMAs
@@ -132,22 +128,14 @@ def compute_trading_costs(trades, spreads):
 
     if type(volume) == pd.Series:
         assert type(spreads) == pd.Series, "spreads and trades must be of the same type"
-        assert (
-            trades.index == spreads.index
-        ).all(), "Index of trades and spreads must be the same"
+        assert (trades.index == spreads.index).all(), "Index of trades and spreads must be the same"
 
         return 0.5 * (spreads * volume).sum()
 
     elif type(volume) == pd.DataFrame:
-        assert (
-            type(spreads) == pd.DataFrame
-        ), "spreads and trades must be of the same type"
-        assert (
-            trades.index == spreads.index
-        ).all(), "Index of trades and spreads must be the same"
-        assert (
-            trades.columns == spreads.columns
-        ).all(), "Columns of trades and spreads must be the same"
+        assert type(spreads) == pd.DataFrame, "spreads and trades must be of the same type"
+        assert (trades.index == spreads.index).all(), "Index of trades and spreads must be the same"
+        assert (trades.columns == spreads.columns).all(), "Columns of trades and spreads must be the same"
 
         return 0.5 * (spreads * volume).sum(axis=1)
 
@@ -192,19 +180,13 @@ def simulate(res, portfolio, spreads, lev_fraction):
 
     ### Shorting cost
     short_rate = 0.5 / 100 / 252  # half a percent per year
-    short_costs = (portfolio.units[portfolio.units < 0].abs() * portfolio.prices).sum(
-        axis=1
-    ) * short_rate
+    short_costs = (portfolio.units[portfolio.units < 0].abs() * portfolio.prices).sum(axis=1) * short_rate
 
     ### Trading costs
-    trading_costs = compute_trading_costs(
-        portfolio.trades_currency[assets].loc[times], spreads[assets].loc[times]
-    )
+    trading_costs = compute_trading_costs(portfolio.trades_currency[assets].loc[times], spreads[assets].loc[times])
 
     ### NAVs
-    navs = (portfolio_new.nav - short_costs.cumsum() - trading_costs.cumsum()).loc[
-        :exit_date
-    ]
+    navs = (portfolio_new.nav - short_costs.cumsum() - trading_costs.cumsum()).loc[:exit_date]
     positions = portfolio_new.units
     absolute_notionals = positions.abs() * portfolio_new.prices
     long_positions = absolute_notionals[positions > 0].sum(axis=1)
@@ -324,9 +306,7 @@ def construct_stat_arbs(
 
     try:
         if verbose:
-            iterator = tqdm(
-                pool.imap_unordered(construct_stat_arb_helper, all_args), total=K
-            )
+            iterator = tqdm(pool.imap_unordered(construct_stat_arb_helper, all_args), total=K)
         else:
             iterator = pool.imap_unordered(construct_stat_arb_helper, all_args)
 
@@ -354,9 +334,7 @@ def construct_stat_arb_helper(args):
     return construct_stat_arb(*args)
 
 
-def plot_stat_arb(
-    stat_arb_tuple, insample_bound, outsample_bound, spreads, legend=True
-):
+def plot_stat_arb(stat_arb_tuple, insample_bound, outsample_bound, spreads, legend=True):
     stat_arb = stat_arb_tuple.stat_arb
 
     # print stat-arb companies
@@ -368,9 +346,7 @@ def plot_stat_arb(
 
     prices_train = stat_arb_tuple.prices_train.iloc[:]
     # add first value of prices_test to prices_train for plot
-    prices_train = pd.concat(
-        [prices_train, stat_arb_tuple.prices_test.iloc[0:1]], axis=0
-    )
+    prices_train = pd.concat([prices_train, stat_arb_tuple.prices_test.iloc[0:1]], axis=0)
     prices_test = stat_arb_tuple.prices_test
     prices_train_test = pd.concat([prices_train, prices_test], axis=0)
 
@@ -386,12 +362,7 @@ def plot_stat_arb(
         prices_train_test = pd.concat([prices_train, prices_test], axis=0).iloc[
             -len(prices_test) - midpoint_memory + 1 :
         ]
-        mu_test = (
-            (prices_train_test[asset_names] @ stocks)
-            .rolling(midpoint_memory)
-            .mean()
-            .dropna()
-        )
+        mu_test = (prices_train_test[asset_names] @ stocks).rolling(midpoint_memory).mean().dropna()
     else:
         mu_test = stat_arb.mu
     # exit date where (prices_test_temp@s-mu).abs() > cutoff
@@ -426,16 +397,12 @@ def plot_stat_arb(
             if stocks.iloc[i] > 0:
                 stocks_str += f"{np.round(stocks.iloc[i], 1)}" + "×" + asset_names[i]
             else:
-                stocks_str += (
-                    f"-{np.abs(np.round(stocks.iloc[i], 1))}" + "×" + asset_names[i]
-                )
+                stocks_str += f"-{np.abs(np.round(stocks.iloc[i], 1))}" + "×" + asset_names[i]
         else:
             if stocks.iloc[i] > 0:
                 stocks_str += f"+{np.round(stocks.iloc[i], 1)}" + "×" + asset_names[i]
             else:
-                stocks_str += (
-                    f"-{np.abs(np.round(stocks.iloc[i], 1))}" + "×" + asset_names[i]
-                )
+                stocks_str += f"-{np.abs(np.round(stocks.iloc[i], 1))}" + "×" + asset_names[i]
 
     print("stat-arb: ", stocks_str)
 
@@ -451,9 +418,7 @@ def plot_stat_arb(
 
     # plot vertical line at exit date
     if exit_trigger is not None:
-        plt.axvline(
-            exit_trigger, linestyle="--", color="k", label="Exit period", linewidth=2
-        )
+        plt.axvline(exit_trigger, linestyle="--", color="k", label="Exit period", linewidth=2)
         plt.axvline(exit_date, linestyle="--", color="k", linewidth=2)
 
     ## plot horizontal line at +- insample_bound over training period
@@ -525,9 +490,7 @@ def plot_stat_arb(
         )
 
     if legend:
-        plt.legend(
-            bbox_to_anchor=(0.5, 1.225), loc="upper center", ncol=3, borderaxespad=0
-        )
+        plt.legend(bbox_to_anchor=(0.5, 1.225), loc="upper center", ncol=3, borderaxespad=0)
 
     plt.show()
 
@@ -558,11 +521,7 @@ def plot_stat_arb(
 
     prices_train_test = pd.concat([prices_train, prices_test], axis=0)
     if stat_arb.moving_midpoint:
-        mu = (
-            stat_arb.evaluate(prices_train_test)
-            .rolling(midpoint_memory, min_periods=1)
-            .mean()
-        )
+        mu = stat_arb.evaluate(prices_train_test).rolling(midpoint_memory, min_periods=1).mean()
 
     else:
         stat_arb.metrics(prices_train, stat_arb.mu, T_max=np.inf)
@@ -584,15 +543,11 @@ def plot_stat_arb(
     profit = portfolio.profit
     times = portfolio.units.index
     assets = portfolio.units.columns
-    trading_costs = compute_trading_costs(
-        portfolio.trades_currency[assets], spreads[assets].loc[times]
-    )
+    trading_costs = compute_trading_costs(portfolio.trades_currency[assets], spreads[assets].loc[times])
 
     ### Shorting cost
     short_rate = 0.5 / 100 / 252  # half a percent per year
-    short_costs = (portfolio.units[portfolio.units < 0].abs() * portfolio.prices).sum(
-        axis=1
-    ) * short_rate
+    short_costs = (portfolio.units[portfolio.units < 0].abs() * portfolio.prices).sum(axis=1) * short_rate
     profit = profit - short_costs - trading_costs
 
     profits_train = profit.loc[: prices_train.index[-1]]
