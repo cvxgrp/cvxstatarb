@@ -1,5 +1,7 @@
 # cvxstatarb
 
+[![Renovate enabled](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://github.com/renovatebot/renovate)
+
 This code repository accompanies two papers:
 
 - [Finding Moving-Band Statistical Arbitrages via Convex-Concave Optimization](https://web.stanford.edu/~boyd/papers/cvx_ccv_stat_arb.html)
